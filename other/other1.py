@@ -6,3 +6,15 @@ for i in l:
         num = num+1
 
 print(num)
+
+def bytes_int(data):
+    return int().from_bytes(data, byteorder='big', signed=True)
+
+bytes1 =bytes(b'\xff')
+print(0xff)
+print(bytes_int(bytes1))
+
+data = bytes.fromhex('0101010102020202')
+print(data[:4])
+print(data[5:])
+print(bytes_int(data))
