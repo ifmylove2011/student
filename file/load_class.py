@@ -5,10 +5,12 @@ import sys
 
 # class_file_path = sys.argv[1]
 class_file_path = "Point.class"
+# class_file_path = "ISortStrategy.class"
+# class_file_path = "BubbleSort.class"
 
 
 class Constant_Base:
-    tag = 0
+    tag = bytes(1)     # u1
     length = 0
     data = bytes()
 
