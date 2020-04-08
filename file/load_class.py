@@ -330,10 +330,3 @@ def print_bytes_hex(data):
     lin = ['%02X' % i for i in data]
     print(" ".join(lin))
 
-
-def bytes_int(data):
-    return int().from_bytes(data, byteorder='big', signed=True)
-
-
-# read_class('BubbleSort.class')
-read_class('WeakDemo.class')
