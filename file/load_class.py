@@ -23,6 +23,9 @@ class Constant_Base:
     def offset(self):
         return self.length - 1
 
+    def space(self):
+        return 1
+
     def print(self):
         print('{0} {1}'.format(bytes_hex(bytes([self.tag])), bytes_hex(self.data)))
 
@@ -49,6 +52,9 @@ class Constant_Utf8_info:
         print('{0} \tlength= {1}'.format(self.bytes_hex(self.len_byte), self.length))
         print('str= {0}'.format(self.to_string()))
         print()
+
+    def space(self):
+        return 1
 
     def to_string(self):
         return str(self.bytes, 'utf-8')
@@ -129,7 +135,7 @@ class Constant_Long_info(Constant_Base):
 
     def print(self):
         Constant_Base.print(self)
-        print('{0} \t\t\t\ttag= {1}'.format(bytes_hex(Constant_Base.head), self.tag))
+        print('{0} \t\t\t\t\t\t\ttag= {1}'.format(bytes_hex(Constant_Base.head), self.tag))
         print('{0} \tvalue= {1}'.format(bytes_hex(self.data), self.value))
 
     def read(self):
@@ -137,8 +143,12 @@ class Constant_Long_info(Constant_Base):
         self.low_bytes = self.data[4:]
         self.value = bytes_int(self.data)
 
+    def space(self):
+        return 2
+
     def to_string(self):
         return str(self.value)
+
 
 # 双精度浮点型字面量
 class Constant_Double_info(Constant_Base):
@@ -151,13 +161,16 @@ class Constant_Double_info(Constant_Base):
 
     def print(self):
         Constant_Base.print(self)
-        print('{0} \t\t\t\ttag= {1}'.format(bytes_hex(Constant_Base.head), self.tag))
+        print('{0} \t\t\t\t\t\t\ttag= {1}'.format(bytes_hex(Constant_Base.head), self.tag))
         print('{0} \tvalue= {1}'.format(bytes_hex(self.data), self.value))
 
     def read(self):
         self.high_bytes = self.data[:4]
         self.low_bytes = self.data[4:]
         self.value = round(struct.unpack('!f', bytes.fromhex(bytes_hex(self.data)))[0], 6)
+
+    def space(self):
+        return 2
 
     def to_string(self):
         return str(self.value)
@@ -399,6 +412,7 @@ def read_class(file_path):
     while constant_index < constant_size:
         head = binfile.read(1)
         tag = bytes_int(head)
+
         if tag in class_map:
             class_model = class_map.get(tag)
             instance = class_model()
@@ -408,7 +422,8 @@ def read_class(file_path):
             # print('# {0}   {1} -->'.format(constant_index, instance.__class__.__name__))
             # instance.print()
             Constant_Base.constant_map[constant_index] = instance
-        else:
+            constant_index += instance.space()
+        elif tag==1:
             len_byte = binfile.read(2)
             len = bytes_int(len_byte)
             instance = Constant_Utf8_info(len)
@@ -418,7 +433,7 @@ def read_class(file_path):
             # print('# {0}   {1} -->'.format(constant_index, instance.__class__.__name__))
             # instance.print()
             Constant_Base.constant_map[constant_index] = instance
-        constant_index += 1
+            constant_index += instance.space()
 
     for index, instance in Constant_Base.constant_map.items():
         print('# {0}   {1} -->'.format(index, instance.__class__.__name__))
@@ -427,17 +442,17 @@ def read_class(file_path):
         print()
         print("-"*36)
 
-    access_flag_data = binfile.read(2)
-    print_bytes_hex(access_flag_data)
-    access_flag = bytes_int(access_flag_data)
-
-    this_class_data = binfile.read(2)
-    print_bytes_hex(this_class_data)
-    this_class = bytes_int(this_class_data)
-
-    super_class_data = binfile.read(2)
-    print_bytes_hex(super_class_data)
-    super_class = bytes_int(super_class_data)
+    # access_flag_data = binfile.read(2)
+    # print_bytes_hex(access_flag_data)
+    # access_flag = bytes_int(access_flag_data)
+    #
+    # this_class_data = binfile.read(2)
+    # print_bytes_hex(this_class_data)
+    # this_class = bytes_int(this_class_data)
+    #
+    # super_class_data = binfile.read(2)
+    # print_bytes_hex(super_class_data)
+    # super_class = bytes_int(super_class_data)
 
     binfile.close()
 
@@ -456,7 +471,7 @@ def bytes_hex(s):
     return " ".join(lin)
 
 
-read_class('F:\XTER\Projects\TechBasis\out\production\TechBasis\com\\xter\\algorithm\other\BinarySeachI.class')
+read_class('E:\studying\StudioProjects\TechBasis\out\production\TechBasis\com\\xter\\algorithm\other\BinarySeachI.class')
 # classfile = sys.argv[1]
 # print("源文件路径为:" + classfile)
 # read_class(classfile)
