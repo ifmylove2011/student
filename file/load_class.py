@@ -175,6 +175,7 @@ class Constant_Double_info(Constant_Base):
     def to_string(self):
         return str(self.value)
 
+
 # 类或接口的符号引用
 class Constant_Class_info(Constant_Base):
     name_index = 0  # u2
@@ -292,7 +293,7 @@ class Constant_NameAndType_info(Constant_Base):
     def read(self):
         self.name_index = bytes_int(self.data[:2])
         self.descriptor_index = bytes_int(self.data[2:])
-        
+
     def to_string(self):
         return Constant_Base.constant_map[self.name_index].to_string() + ";" + Constant_Base.constant_map[
             self.descriptor_index].to_string()
@@ -322,6 +323,7 @@ class Constant_MethodHandle_info(Constant_Base):
         return Constant_Base.constant_map[self.reference_kind].to_string() + ";" + Constant_Base.constant_map[
             self.reference_index].to_string()
 
+
 # 标识方法类型
 class Constant_MethodType_info(Constant_Base):
     descriptor_index = 0  # u2
@@ -340,7 +342,8 @@ class Constant_MethodType_info(Constant_Base):
 
     def to_string(self):
         return Constant_Base.constant_map[self.descriptor_index].to_string()
-    
+
+
 # 表示一个动态方法调用点
 class Constant_InvokeDynamic_info(Constant_Base):
     bootstrap_method_attr_index = 0  # u2
@@ -361,14 +364,85 @@ class Constant_InvokeDynamic_info(Constant_Base):
     def read(self):
         self.bootstrap_method_attr_index = self.data[:2]
         self.name_and_type_index = self.data[2:]
-        
+
     def to_string(self):
-        return Constant_Base.constant_map[self.bootstrap_method_attr_index].to_string() + ";" + Constant_Base.constant_map[
-            self.name_and_type_index].to_string()
+        return Constant_Base.constant_map[self.bootstrap_method_attr_index].to_string() + ";" + \
+               Constant_Base.constant_map[
+                   self.name_and_type_index].to_string()
+
+
+class Table_base:
+    length = 0
+    head = bytes()
+    data = bytes()
+
+    def offset(self):
+        return self.length
+
+    def print(self):
+        print('{0} {1}'.format(bytes_hex(self.head), bytes_hex(self.data)))
+
+
+# 字段表
+class Field_info(Table_base):
+    access_flags = bytes(2)
+    name_index = bytes(2)
+    descriptor_index = bytes(2)
+    attributes_count = bytes(2)
+    attributes_info = bytes()
+
+    def offset(self):
+        return self.length - 8
+
+    def to_string(self):
+        return Constant_Base.constant_map
+
+
+# 方法表
+class Method_info(Table_base):
+    access_flags = bytes(2)
+    name_index = bytes(2)
+    descriptor_index = bytes(2)
+    attributes_count = bytes(2)
+    attributes_info = bytes()
+
+    def offset(self):
+        return self.length - 8
+
+    def to_string(self):
+        return Constant_Base.constant_map
+
+
+# 属性表
+class Attribute_info(Table_base):
+    attribute_name_index = bytes(2)
+    attribute_length = bytes(4)
+    info = bytes()
+
+    def offset(self):
+        return self.length - 8
+
+    def to_string(self):
+        return Constant_Base.constant_map
+
+
+def print_bytes_hex(data):
+    lin = ['%02X' % i for i in data]
+    print(" ".join(lin))
+
+
+def bytes_int(data):
+    return int().from_bytes(data, byteorder='big', signed=True)
+
+
+def bytes_hex(s):
+    lin = ['%02X' % i for i in s]
+    return " ".join(lin)
+
 
 # 魔数4字节，次版本号2字节，主版本号2字节
 header_indice = [4, 2, 2]
-#
+# 访问标志、类索引、父类索引、接口索引数量
 flag_indice = [2, 2, 2, 2]
 
 # len_map = {7: 2, 9: 4, 10: 4, 11: 4, 8: 2, 3: 4, 4: 4, 5: 8, 6: 8, 12: 4}
@@ -385,6 +459,17 @@ class_map = {7: Constant_Class_info,
              15: Constant_MethodHandle_info,
              16: Constant_MethodType_info,
              18: Constant_InvokeDynamic_info}
+
+access_class_map = {
+    0x0001: "ACC_PUBLIC",  # 0000 0000 0000 0001
+    0x0010: "ACC_FINAL",  # 0000 0000 0001 0000
+    0x0020: "ACC_SUPER",  # 0000 0000 0010 0000
+    0x0200: "ACC_INTERFACE",  # 0000 0010 0000 0000
+    0x0400: "ACC_ABSTRACT",  # 0000 0100 0000 0000
+    0x1000: "ACC_SYNTHETIC",  # 0001 0000 0000 0000
+    0x2000: "ACC_ANNOTATION",  # 0010 0000 0000 0000
+    0x4000: "ACC_ENUM",  # 0100 0000 0000 0000
+}
 
 
 def read_class(file_path):
@@ -423,7 +508,7 @@ def read_class(file_path):
             # instance.print()
             Constant_Base.constant_map[constant_index] = instance
             constant_index += instance.space()
-        elif tag==1:
+        elif tag == 1:
             len_byte = binfile.read(2)
             len = bytes_int(len_byte)
             instance = Constant_Utf8_info(len)
@@ -440,38 +525,59 @@ def read_class(file_path):
         instance.print()
         print(instance.to_string())
         print()
-        print("-"*36)
+        print("-" * 36)
 
-    # access_flag_data = binfile.read(2)
-    # print_bytes_hex(access_flag_data)
-    # access_flag = bytes_int(access_flag_data)
-    #
-    # this_class_data = binfile.read(2)
-    # print_bytes_hex(this_class_data)
-    # this_class = bytes_int(this_class_data)
-    #
-    # super_class_data = binfile.read(2)
-    # print_bytes_hex(super_class_data)
-    # super_class = bytes_int(super_class_data)
+    # 读取类的访问标志
+    access_flag_data = binfile.read(2)
+    print_bytes_hex(access_flag_data)
+    access_flag = bytes_int(access_flag_data)
+    for k, v in access_class_map.items():
+        result = k & access_flag
+        if result != 0:
+            print(v)
+    print("-" * 36)
+
+    # 读取类索引
+    this_class_data = binfile.read(2)
+    print_bytes_hex(this_class_data)
+    index_this_class = bytes_int(this_class_data)
+    print(Constant_Base.constant_map[index_this_class].to_string())
+    print("-" * 36)
+
+    # 读取父类索引
+    super_class_data = binfile.read(2)
+    print_bytes_hex(super_class_data)
+    index_super_class = bytes_int(super_class_data)
+    print(Constant_Base.constant_map[index_super_class].to_string())
+    print("-" * 36)
+
+    # 读取接口数量及接口索引
+    interfaces_count_data = binfile.read(2)
+    print_bytes_hex(interfaces_count_data)
+    interfaces_count = bytes_int(interfaces_count_data)
+    print('interfaces count = {0}\r\n'.format(interfaces_count))
+    interfaces_index = 0
+    while interfaces_index < interfaces_count:
+        interface_index_data = binfile.read(2)
+        print_bytes_hex(interface_index_data)
+        index_interface = bytes_int(interface_index_data)
+        print(Constant_Base.constant_map[index_interface].to_string())
+        interfaces_index = +1
+    print("-" * 36)
+
+    # 读取字段表
+    fields_count_data = binfile.read(2)
+    print_bytes_hex(fields_count_data)
+    fields_count = bytes_int(fields_count_data)
+    print('fields count = {0}\r\n'.format(fields_count))
+
+    print("-" * 36)
 
     binfile.close()
 
 
-def print_bytes_hex(data):
-    lin = ['%02X' % i for i in data]
-    print(" ".join(lin))
-
-
-def bytes_int(data):
-    return int().from_bytes(data, byteorder='big', signed=True)
-
-
-def bytes_hex(s):
-    lin = ['%02X' % i for i in s]
-    return " ".join(lin)
-
-
-read_class('E:\studying\StudioProjects\TechBasis\out\production\TechBasis\com\\xter\\algorithm\other\BinarySeachI.class')
+read_class(
+    'E:\studying\StudioProjects\TechBasis\out\production\TechBasis\com\\xter\\algorithm\other\BinarySeachI.class')
 # classfile = sys.argv[1]
 # print("源文件路径为:" + classfile)
 # read_class(classfile)
